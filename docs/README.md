@@ -1,1 +1,1 @@
-Documentation for the verification fiow.
+Documentation for the verification flow.
