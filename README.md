@@ -19,7 +19,7 @@ Ubuntu 24.04 LTS, x86-64.
 | Verilator 5.054: lint, simulation, assertions, coverage, VCD | tested on one machine |
 | Verilator 5.054: FST waveforms, UVM | not working or not tested yet |
 | Installer and tool bundle | in progress |
-| Makefile template | not tested yet |
+| Makefile template | tested on 2026-11-19 with Verilator 5.054, one machine |
 
 ## Folders
 - installer/  one-command installer (in progress)
