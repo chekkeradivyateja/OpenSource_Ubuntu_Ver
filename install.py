@@ -68,40 +68,78 @@ def run(cmd, cwd=None, env=None, timeout=None):
 
 # ---------------------------------------------------------------- checks
 def check():
-    fails, warns = [], []
+    """Print one line per check: status, item, what was found, what is needed, the fix."""
+    rows = []  # (status, item, found, required, fix)
+    def add(ok, item, found, required, fix, warn=False):
+        rows.append(("PASS" if ok else "WARN" if warn else "FAIL", item, found, required, "" if ok else fix))
+
     osr = dict(l.rstrip().split("=", 1) for l in open("/etc/os-release") if "=" in l)
-    if osr.get("ID") != "ubuntu" or not osr.get("VERSION_ID", "").strip('"').startswith("24.04"):
-        fails.append(f"Ubuntu 24.04 required, your system is {osr.get('PRETTY_NAME', '?').strip(chr(34))}. "
-                     "Fix: use Ubuntu 24.04 LTS.")
-    if platform.machine() != "x86_64":
-        fails.append(f"x86-64 required, found {platform.machine()}. Fix: use a 64-bit Intel/AMD machine.")
+    add(osr.get("ID") == "ubuntu" and osr.get("VERSION_ID", "").strip('"').startswith("24.04"),
+        "Ubuntu", osr.get("PRETTY_NAME", "?").strip('"'), "Ubuntu 24.04.x LTS",
+        "install Ubuntu 24.04 LTS (22.04 cannot run the packaged tools: glibc 2.38+ needed)")
+    add(platform.machine() == "x86_64", "CPU", platform.machine(), "x86_64",
+        "use a 64-bit Intel/AMD machine or VM")
+    add(sys.version_info >= (3, 12), "Python", platform.python_version(), "3.12 or newer",
+        "use the python3 that comes with Ubuntu 24.04")
     ram = int(next(l.split()[1] for l in open("/proc/meminfo") if l.startswith("MemTotal"))) / 2**20
-    if ram < 3.5:
-        fails.append(f"RAM {ram:.1f} GB, at least 4 GB required. Fix: add RAM or give the VM more memory.")
-    elif ram < 7.5:
-        warns.append(f"RAM {ram:.1f} GB; 8 GB recommended (UVM compile needs about 3 GB).")
+    add(ram >= 7.5, "RAM", f"{ram:.1f} GB", "8 GB recommended, 4 GB minimum",
+        "add RAM or give the VM more memory (UVM compile needs about 3 GB)", warn=ram >= 3.5)
     base = next(p for p in [DEST, *DEST.parents] if p.exists())
     free = shutil.disk_usage(base).free / 2**30
-    if free < 3:
-        fails.append(f"Free disk {free:.1f} GB on {base}, at least 3 GB required. Fix: free disk space.")
-    if os.geteuid() == 0:
-        fails.append("Do not run with sudo. Fix: run 'python3 install.py' as your normal user.")
-    if not shutil.which("sudo"):
-        fails.append("sudo not found. Fix: ask your administrator to add your user to the sudo group.")
-    if (run(["pgrep", "-x", "apt|apt-get|dpkg"])[0] == 0
-            or run(["pgrep", "-f", "/usr/bin/unattended-upgrade( |$)"])[0] == 0):
-        fails.append("apt/dpkg is busy (updates running). Fix: wait a few minutes and run again.")
-    for name, line in (sums().items() if (PKG / "SHA256SUMS").exists() else [("SHA256SUMS", "")]):
-        if not (PKG / name).exists():
-            fails.append(f"Missing packages/{name}. Fix: clone the repository again.")
-        elif sha256(PKG / name) != line:
-            fails.append(f"Checksum mismatch for packages/{name}. Fix: clone the repository again.")
-    for w in warns:
-        log(f"WARN  {w}")
-    for f in fails:
-        log(f"FAIL  {f}")
-    log("PASS  all checks" if not fails else f"{len(fails)} check(s) failed; nothing was changed.")
+    add(free >= 3, "Free disk", f"{free:.1f} GB on {base}", "3 GB", "free disk space on " + str(base))
+    add(os.geteuid() != 0, "User", getpass.getuser(), "normal user (not sudo/root)",
+        "run 'python3 install.py' without sudo")
+    add(bool(shutil.which("sudo")), "sudo", shutil.which("sudo") or "not found",
+        "sudo command (your password is checked when installing)",
+        "ask your administrator to install sudo and give you sudo rights")
+    busy = (run(["pgrep", "-x", "apt|apt-get|dpkg"])[0] == 0
+            or run(["pgrep", "-f", "/usr/bin/unattended-upgrade( |$)"])[0] == 0)
+    add(not busy, "apt", "busy (updates running)" if busy else "idle", "idle",
+        "wait a few minutes for Ubuntu updates to finish, then run again")
+    for name, digest in (sums().items() if (PKG / "SHA256SUMS").exists() else [("SHA256SUMS", "")]):
+        found = "missing" if not (PKG / name).exists() else "OK" if sha256(PKG / name) == digest else "checksum mismatch"
+        add(found == "OK", f"packages/{name}", found, "present, checksum OK", "clone the repository again")
+
+    MISSING_APT[:] = [a for a in APT if not apt_version(a)]
+    for a in APT:
+        v = apt_version(a)
+        rows.append(("PASS" if v else "TODO", f"apt {a}", v or "not installed", "installed",
+                     "" if v else "will be installed (you will be asked)"))
+    if MISSING_APT:
+        online = internet()
+        add(online, "Internet", "reachable" if online else "no connection to archive.ubuntu.com",
+            "needed to install missing apt packages", "connect to the internet, or install them manually")
+    other = shutil.which("verilator")
+    if other and not other.startswith(str(DEST)):
+        v = run([other, "--version"])[1].strip()
+        rows.append(("INFO", "Other Verilator", f"{v} at {other}", None,
+                     "it is kept; the new 5.054 comes first in PATH in new terminals"))
+
+    for st, item, found, req, fix in rows:
+        if req is None:
+            log(f"{st:5} {item}: found {found}. Note: {fix}")
+        else:
+            log(f"{st:5} {item}: found {found}; required {req}" + (f". Fix: {fix}" if fix else ""))
+    fails = sum(r[0] == "FAIL" for r in rows)
+    log("PASS  all checks" if not fails else f"{fails} check(s) failed; nothing was changed.")
     return not fails
+
+
+MISSING_APT = []
+
+
+def apt_version(pkg):
+    code, out = run(["dpkg-query", "-W", "-f=${Status} ${Version}", pkg])
+    return out.split()[-1] if code == 0 and out.startswith("install ok installed") else ""
+
+
+def internet():
+    import socket
+    try:
+        socket.create_connection(("archive.ubuntu.com", 80), timeout=5).close()
+        return True
+    except OSError:
+        return False
 
 
 def sums():
@@ -118,10 +156,22 @@ def sha256(path):
 
 # ---------------------------------------------------------------- install
 def install():
-    log("== apt packages (asks for your sudo password)")
-    for cmd in (["sudo", "apt-get", "update"], ["sudo", "apt-get", "install", "-y", *APT]):
-        if run(cmd)[0] != 0:
-            sys.exit(f"FAIL  {' '.join(cmd)} failed; see {LOG}")
+    log("== sudo (asks for your password)")
+    if subprocess.run(["sudo", "-v"]).returncode != 0:
+        sys.exit(f"FAIL  sudo did not work for {getpass.getuser()}. Fix: ask your administrator for sudo rights, "
+                 "or check your password.")
+    if MISSING_APT:
+        cmd = ["sudo", "apt-get", "install", "-y", *MISSING_APT]
+        log(f"== {len(MISSING_APT)} apt package(s) missing: {' '.join(MISSING_APT)}")
+        try:
+            answer = input("Install them now? [Y/n] ").strip().lower()
+        except EOFError:
+            answer = "n"
+        if answer not in ("", "y", "yes"):
+            sys.exit(f"Stopped. Install them yourself, then run again:\n  sudo apt-get update && {' '.join(cmd)}")
+        for c in (["sudo", "apt-get", "update"], cmd):
+            if run(c)[0] != 0:
+                sys.exit(f"FAIL  {' '.join(c)} failed; see {LOG}")
     user, group = getpass.getuser(), grp.getgrgid(os.getgid()).gr_name
     if run(["sudo", "install", "-d", "-o", user, "-g", group, str(DEST)])[0] != 0:
         sys.exit(f"FAIL  could not create {DEST}; see {LOG}")
