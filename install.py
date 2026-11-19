@@ -111,7 +111,9 @@ def check():
             "needed to install missing apt packages", "connect to the internet, or install them manually")
     other = shutil.which("verilator")
     if other and not other.startswith(str(DEST)):
-        v = run([other, "--version"])[1].strip()
+        # run it without our VERILATOR_ROOT, which belongs to the new install, not to this one
+        env = {k: v for k, v in os.environ.items() if k != "VERILATOR_ROOT"}
+        v = (run([other, "--version"], env=env)[1].strip().splitlines() or ["unknown version"])[0]
         rows.append(("INFO", "Other Verilator", f"{v} at {other}", None,
                      "it is kept; the new 5.054 comes first in PATH in new terminals"))
 
