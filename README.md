@@ -11,7 +11,8 @@ A free replacement for the paid verification flow (VCS, Questa, Verdi), for trai
 - Constraint randomization: z3
 
 ## Supported system
-Ubuntu 24.04 LTS, x86-64. 8 GB RAM recommended (4 GB minimum), 3 GB free disk.
+Ubuntu 24.04 LTS (any 24.04.x), x86-64. 8 GB RAM recommended (4 GB minimum), 3 GB free disk.
+Ubuntu 22.04 is not supported (the tools need glibc 2.38 or newer).
 
 ## Install
     git clone https://github.com/chekkeradivyateja/OpenSource_Ubuntu_Ver.git
