@@ -11,18 +11,28 @@ A free replacement for the paid verification flow (VCS, Questa, Verdi), for trai
 - Constraint randomization: z3
 
 ## Supported system
-Ubuntu 24.04 LTS, x86-64.
+Ubuntu 24.04 LTS, x86-64. 8 GB RAM recommended (4 GB minimum), 3 GB free disk.
+
+## Install
+    git clone https://github.com/chekkeradivyateja/OpenSource_Ubuntu_Ver.git
+    cd OpenSource_Ubuntu_Ver
+    python3 install.py
+
+It asks for your sudo password once, installs into /opt/eda/open_ver_flow,
+and ends with a PASS/FAIL self-test. Open a new terminal afterwards.
+Options: `--check` (check only), `--uvm-test` (add a UVM test), `--uninstall`.
 
 ## Status
 | Item | Status |
 |---|---|
 | Verilator 5.054: lint, simulation, assertions, coverage, VCD | tested on one machine |
 | Verilator 5.054: FST waveforms, UVM | tested on 2026-11-19 with Verilator 5.054, one machine (minimal UVM test only) |
-| Installer and tool bundle | in progress |
+| Installer (install.py) | --check, unpack, self-test, second run and --uninstall tested on 2026-11-19 on one machine with apt/sudo steps skipped; full install on a fresh Ubuntu 24.04 not tested yet |
 | Makefile template | tested on 2026-11-19 with Verilator 5.054, one machine |
 
 ## Folders
-- installer/  one-command installer (in progress)
+- install.py  one-command installer (Python standard library only)
+- installer/  installer notes
 - packages/  prebuilt Verilator 5.054, patched UVM library, Surfer v0.7.0
 - makefile_templates/  generic Makefile for a Verilator project
 - examples/  small demo projects
