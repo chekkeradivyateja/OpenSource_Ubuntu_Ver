@@ -76,11 +76,11 @@ def check():
     osr = dict(l.rstrip().split("=", 1) for l in open("/etc/os-release") if "=" in l)
     add(osr.get("ID") == "ubuntu" and osr.get("VERSION_ID", "").strip('"').startswith("24.04"),
         "Ubuntu", osr.get("PRETTY_NAME", "?").strip('"'), "Ubuntu 24.04.x LTS",
-        "install Ubuntu 24.04 LTS (22.04 cannot run the packaged tools: glibc 2.38+ needed)")
+        "upgrade to Ubuntu 24.04 LTS (see 'How to fix' below)")
     add(platform.machine() == "x86_64", "CPU", platform.machine(), "x86_64",
         "use a 64-bit Intel/AMD machine or VM")
     add(sys.version_info >= (3, 12), "Python", platform.python_version(), "3.12 or newer",
-        "use the python3 that comes with Ubuntu 24.04")
+        "Ubuntu 24.04 comes with Python 3.12; upgrading Ubuntu fixes this")
     ram = int(next(l.split()[1] for l in open("/proc/meminfo") if l.startswith("MemTotal"))) / 2**20
     add(ram >= 7.5, "RAM", f"{ram:.1f} GB", "8 GB recommended, 4 GB minimum",
         "add RAM or give the VM more memory (UVM compile needs about 3 GB)", warn=ram >= 3.5)
@@ -122,10 +122,52 @@ def check():
             log(f"{st:5} {item}: found {found}; required {req}" + (f". Fix: {fix}" if fix else ""))
     fails = sum(r[0] == "FAIL" for r in rows)
     log("PASS  all checks" if not fails else f"{fails} check(s) failed; nothing was changed.")
+    UPGRADE[:] = [1] if rows[0][0] == "FAIL" and osr.get("ID") == "ubuntu" else []
+    if UPGRADE:
+        log("\nHow to fix: upgrade this machine to Ubuntu 24.04 LTS. The packaged tools need it\n"
+            "(glibc 2.38+, Python 3.12); installing only a newer Python does not help.")
+        log("Commands:\n  " + "\n  ".join(" ".join(c) for c in upgrade_steps()))
+        log("Or install Ubuntu 24.04 LTS fresh: https://ubuntu.com/download/desktop")
     return not fails
 
 
 MISSING_APT = []
+UPGRADE = []  # non-empty when the Ubuntu release must be upgraded
+RELEASE_CFG = Path("/etc/update-manager/release-upgrades")
+
+
+def upgrade_steps():
+    """Commands that upgrade Ubuntu to the next LTS release (22.04 -> 24.04)."""
+    steps = [["sudo", "apt-get", "update"], ["sudo", "apt-get", "full-upgrade", "-y"]]
+    if not shutil.which("do-release-upgrade"):
+        steps.append(["sudo", "apt-get", "install", "-y", "update-manager-core"])
+    if RELEASE_CFG.exists() and "Prompt=lts" not in RELEASE_CFG.read_text():
+        steps.append(["sudo", "sed", "-i", "s/^Prompt=.*/Prompt=lts/", str(RELEASE_CFG)])
+    return steps + [["sudo", "do-release-upgrade"]]
+
+
+def offer_upgrade():
+    """Ask the user, then run the upgrade commands one by one (default: No)."""
+    log("\nThe installer can run these commands for you now. It takes 30-60 minutes, needs\n"
+        "internet and a reboot. BACK UP YOUR FILES FIRST. On a shared/lab machine, ask\n"
+        "your administrator before upgrading.")
+    try:
+        answer = input("Upgrade Ubuntu to 24.04 now? [y/N] ").strip().lower()
+    except EOFError:
+        answer = "n"
+    if answer not in ("y", "yes"):
+        log("Not upgraded. Run the commands above yourself, reboot, then run install.py again.")
+        return
+    for cmd in upgrade_steps():
+        log("$ " + " ".join(cmd))
+        if cmd[-1] == "do-release-upgrade" and Path("/var/run/reboot-required").exists():
+            log("A reboot is needed first. Run 'sudo reboot', then run install.py again to continue.")
+            return
+        code = subprocess.run(cmd).returncode  # interactive: the user answers the upgrade questions
+        if code != 0:
+            log(f"FAIL  '{' '.join(cmd)}' exited with {code}. Fix the problem shown above, then run install.py again.")
+            return
+    log("Upgrade finished. Reboot if asked, then run: python3 install.py")
 
 
 def apt_version(pkg):
@@ -273,6 +315,8 @@ def main():
         return uninstall()
     log("== checks")
     if not check():
+        if UPGRADE and not a.check:
+            offer_upgrade()
         sys.exit(1)
     if a.check:
         return
