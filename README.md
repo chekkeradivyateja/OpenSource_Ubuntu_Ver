@@ -23,6 +23,7 @@ Ubuntu 24.04 LTS, x86-64.
 
 ## Folders
 - installer/  one-command installer (in progress)
+- packages/  prebuilt Verilator 5.054, patched UVM library, Surfer v0.7.0
 - makefile_templates/  generic Makefile for a Verilator project
 - examples/  small demo projects
 - docs/  tools, limitations, assertions, coverage, troubleshooting
