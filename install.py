@@ -71,7 +71,8 @@ def check():
     fails, warns = [], []
     osr = dict(l.rstrip().split("=", 1) for l in open("/etc/os-release") if "=" in l)
     if osr.get("ID") != "ubuntu" or not osr.get("VERSION_ID", "").strip('"').startswith("24.04"):
-        fails.append(f"Ubuntu 24.04 required, found {osr.get('PRETTY_NAME', '?')}. Fix: use Ubuntu 24.04 LTS.")
+        fails.append(f"Ubuntu 24.04 required, your system is {osr.get('PRETTY_NAME', '?').strip(chr(34))}. "
+                     "Fix: use Ubuntu 24.04 LTS.")
     if platform.machine() != "x86_64":
         fails.append(f"x86-64 required, found {platform.machine()}. Fix: use a 64-bit Intel/AMD machine.")
     ram = int(next(l.split()[1] for l in open("/proc/meminfo") if l.startswith("MemTotal"))) / 2**20
