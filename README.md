@@ -28,7 +28,7 @@ Options: `--check` (check only), `--uvm-test` (add a UVM test), `--uninstall`.
 |---|---|
 | Verilator 5.054: lint, simulation, assertions, coverage, VCD | tested on one machine |
 | Verilator 5.054: FST waveforms, UVM | tested on 2026-11-19 with Verilator 5.054, one machine (minimal UVM test only) |
-| Installer (install.py) | --check, unpack, self-test, second run and --uninstall tested on 2026-11-19 on one machine with apt/sudo steps skipped; full install on a fresh Ubuntu 24.04 not tested yet |
+| Installer (install.py) | install on one Ubuntu 24.04.5 machine: self-test 8/8 PASS incl. UVM (2026-11-19); fresh-machine install not tested yet |
 | Makefile template | tested on 2026-11-19 with Verilator 5.054, one machine |
 
 ## Folders
