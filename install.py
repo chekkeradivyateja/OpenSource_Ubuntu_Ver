@@ -53,6 +53,18 @@ def log(msg=""):
         f.write(msg + "\n")
 
 
+def ask(question):
+    """Ask on the terminal and log the question with the answer. No terminal input (EOF) means "n"."""
+    try:
+        answer = input(question).strip().lower()
+        shown = answer or "(Enter)"
+    except EOFError:
+        answer, shown = "n", "(no input: n)"
+    with open(LOG, "a") as f:
+        f.write(f"{question}{shown}\n")
+    return answer
+
+
 def run(cmd, cwd=None, env=None, timeout=None):
     """Run a command, copy its output to the log, return (exit code, output)."""
     try:
@@ -67,15 +79,23 @@ def run(cmd, cwd=None, env=None, timeout=None):
 
 
 # ---------------------------------------------------------------- checks
+def os_release():
+    return {k: v.strip('"') for k, v in (l.rstrip().split("=", 1) for l in open("/etc/os-release") if "=" in l)}
+
+
+def ubuntu_version():
+    return os_release().get("VERSION", "?")
+
+
 def check():
     """Print one line per check: status, item, what was found, what is needed, the fix."""
     rows = []  # (status, item, found, required, fix)
     def add(ok, item, found, required, fix, warn=False):
         rows.append(("PASS" if ok else "WARN" if warn else "FAIL", item, found, required, "" if ok else fix))
 
-    osr = dict(l.rstrip().split("=", 1) for l in open("/etc/os-release") if "=" in l)
-    add(osr.get("ID") == "ubuntu" and osr.get("VERSION_ID", "").strip('"').startswith("24.04"),
-        "Ubuntu", osr.get("PRETTY_NAME", "?").strip('"'), "Ubuntu 24.04.x LTS",
+    osr = os_release()
+    add(osr.get("ID") == "ubuntu" and osr.get("VERSION_ID", "").startswith("24.04"),
+        "Ubuntu", osr.get("PRETTY_NAME", "?"), "Ubuntu 24.04.x LTS",
         "upgrade to Ubuntu 24.04 LTS (see 'How to fix' below)")
     add(platform.machine() == "x86_64", "CPU", platform.machine(), "x86_64",
         "use a 64-bit Intel/AMD machine or VM")
@@ -100,9 +120,9 @@ def check():
         found = "missing" if not (PKG / name).exists() else "OK" if sha256(PKG / name) == digest else "checksum mismatch"
         add(found == "OK", f"packages/{name}", found, "present, checksum OK", "clone the repository again")
 
-    MISSING_APT[:] = [a for a in APT if not apt_version(a)]
-    for a in APT:
-        v = apt_version(a)
+    versions = {a: apt_version(a) for a in APT}
+    MISSING_APT[:] = [a for a, v in versions.items() if not v]
+    for a, v in versions.items():
         rows.append(("PASS" if v else "TODO", f"apt {a}", v or "not installed", "installed",
                      "" if v else "will be installed (you will be asked)"))
     if MISSING_APT:
@@ -153,10 +173,7 @@ def offer_upgrade():
     log("\nThe installer can run these commands for you now. It takes 30-60 minutes, needs\n"
         "internet and a reboot. BACK UP YOUR FILES FIRST. On a shared/lab machine, ask\n"
         "your administrator before upgrading.")
-    try:
-        answer = input("Upgrade Ubuntu to 24.04 now? [y/N] ").strip().lower()
-    except EOFError:
-        answer = "n"
+    answer = ask("Upgrade Ubuntu to 24.04 now? [y/N] ")
     if answer not in ("y", "yes"):
         log("Not upgraded. Run the commands above yourself, reboot, then run install.py again.")
         return
@@ -169,7 +186,12 @@ def offer_upgrade():
         if code != 0:
             log(f"FAIL  '{' '.join(cmd)}' exited with {code}. Fix the problem shown above, then run install.py again.")
             return
-    log("Upgrade finished. Reboot if asked, then run: python3 install.py")
+    now = ubuntu_version()
+    if now.startswith("24.04"):
+        log(f"Upgrade finished (now Ubuntu {now}). Reboot if asked, then run: python3 install.py")
+    else:
+        log(f"Ubuntu is still {now}: the upgrade did not run. Read the messages from\n"
+            "do-release-upgrade above, fix the problem, then run install.py again.")
 
 
 def apt_version(pkg):
@@ -207,10 +229,7 @@ def install():
     if MISSING_APT:
         cmd = ["sudo", "apt-get", "install", "-y", *MISSING_APT]
         log(f"== {len(MISSING_APT)} apt package(s) missing: {' '.join(MISSING_APT)}")
-        try:
-            answer = input("Install them now? [Y/n] ").strip().lower()
-        except EOFError:
-            answer = "n"
+        answer = ask("Install them now? [Y/n] ")
         if answer not in ("", "y", "yes"):
             sys.exit(f"Stopped. Install them yourself, then run again:\n  sudo apt-get update && {' '.join(cmd)}")
         for c in (["sudo", "apt-get", "update"], cmd):

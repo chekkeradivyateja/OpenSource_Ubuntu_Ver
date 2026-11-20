@@ -9,7 +9,8 @@ repository folder as your normal user, **not** with sudo:
     python3 install.py --check      # only check the machine; changes nothing
     python3 install.py --uninstall  # remove the installed tools and the ~/.bashrc block
 
-Everything printed is also written to `install.log` in the repository folder.
+Everything printed, and your answers to its questions, is also written to `install.log` in the
+repository folder.
 
 ## What it does, step by step
 1. **Checks** the machine. Every line shows what was found, what is required and, if needed,
@@ -26,7 +27,8 @@ Everything printed is also written to `install.log` in the repository folder.
    If any check is `FAIL`, nothing is changed.
 2. **Ubuntu 22.04 or older**: prints the upgrade commands and asks
    `Upgrade Ubuntu to 24.04 now? [y/N]` (default No). Back up first; on a lab machine
-   ask the administrator. After the upgrade and reboot, run `install.py` again.
+   ask the administrator. Afterwards it checks the Ubuntu version again and says whether the
+   upgrade really happened. After the upgrade and reboot, run `install.py` again.
 3. **sudo**: asks for your password once.
 4. **apt packages**: lists the missing ones and asks `Install them now? [Y/n]`.
    Packages: `yosys z3 lcov gtkwave g++ make perl python3 ccache zlib1g-dev liblz4-dev`.
@@ -66,6 +68,7 @@ replaced, and the self-test runs again.
 | Message | What to do |
 |---|---|
 | `FAIL  Ubuntu: found Ubuntu 22.04...` | upgrade to 24.04 (the installer offers it) or install 24.04 fresh |
+| `Ubuntu is still 22.04...: the upgrade did not run` | read what `do-release-upgrade` printed (for example "No new release found", or you answered No); fix that, then run again |
 | `FAIL  User: ... required normal user` | run `python3 install.py` without `sudo` |
 | `FAIL  apt: found busy` | Ubuntu is installing updates; wait a few minutes and run again |
 | `FAIL  packages/...: found checksum mismatch` | the download is damaged; delete the folder and clone again |
