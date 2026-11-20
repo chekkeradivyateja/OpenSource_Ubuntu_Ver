@@ -1,4 +1,5 @@
 // 8-bit up-counter with synchronous reset and enable
+`timescale 1ns/1ps
 module counter (
   input  logic       clk,
   input  logic       rst,

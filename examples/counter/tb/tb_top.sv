@@ -1,4 +1,5 @@
 // Testbench for counter. +TEST1 runs past wrap-around; default runs a short count.
+`timescale 1ns/1ps
 module tb_top;
   logic       clk;
   logic       rst = 1;
