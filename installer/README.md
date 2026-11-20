@@ -53,6 +53,21 @@ An older Verilator (for example Ubuntu's 5.020 or one in your home folder) is ke
 one comes first in `PATH`. `--uninstall` removes only `/opt/eda/open_ver_flow/*` and the
 marked `~/.bashrc` block; apt packages stay.
 
+## What it deletes (and nothing else)
+- On a re-install: an old copy of `verilator-5.054`, `uvm-2020.3.1-vlt-656f20d-patched` or
+  `surfer-0.7.0` inside `/opt/eda/open_ver_flow/`, before unpacking it again.
+- Its own self-test folder in `/tmp` (`open_ver_flow_selftest_*`), only when the self-test passed.
+- `--uninstall`: the same 3 tool folders, `/opt/eda/open_ver_flow` itself only if it is then empty,
+  and the marked block in `~/.bashrc`.
+
+Every delete is checked first: the folder must really be inside `/opt/eda/open_ver_flow` (or `/tmp`),
+otherwise the installer refuses and stops. Before `~/.bashrc` is changed, the previous version is
+saved as `~/.bashrc.open_ver_flow.bak`.
+
+**Safety tip:** copy and paste commands; do not retype them. Never type `rm -rf` with `~`: one
+extra space (`rm -rf ~/ folder`) deletes your whole home folder. To get rid of an old clone,
+rename it instead: `mv ~/OpenSource_Ubuntu_Ver ~/OpenSource_Ubuntu_Ver.old`.
+
 ## Running it again
 Safe: already unpacked packages are skipped (checked by checksum), the `~/.bashrc` block is
 replaced, and the self-test runs again.
@@ -71,7 +86,7 @@ replaced, and the self-test runs again.
 | `Ubuntu is still 22.04...: the upgrade did not run` | read what `do-release-upgrade` printed (for example "No new release found", or you answered No); fix that, then run again |
 | `FAIL  User: ... required normal user` | run `python3 install.py` without `sudo` |
 | `FAIL  apt: found busy` | Ubuntu is installing updates; wait a few minutes and run again |
-| `FAIL  packages/...: found checksum mismatch` | the download is damaged; delete the folder and clone again |
+| `FAIL  packages/...: found checksum mismatch` | the download is damaged; rename the folder (`mv ~/OpenSource_Ubuntu_Ver ~/OpenSource_Ubuntu_Ver.old`) and clone again |
 | `FAIL  Internet: ...` | connect to the internet, or install the listed apt packages another way |
 | `FAIL  sudo did not work` | wrong password or no sudo rights; ask your administrator |
 | `verilator: command not found` after `ALL PASSED` | open a new terminal |

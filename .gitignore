@@ -9,3 +9,4 @@ cov_annot/
 cov_html/
 coverage.info
 cov_summary.txt
+__pycache__/

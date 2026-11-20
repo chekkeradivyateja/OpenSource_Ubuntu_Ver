@@ -39,7 +39,7 @@ help:
 	@echo "  make regress        run all tests in TESTS, print REGRESSION PASSED/FAILED"
 	@echo "  make covtxt         merged coverage summary -> cov_summary.txt, cov_annot/"
 	@echo "  make covhtml        HTML line-coverage report -> cov_html/index.html"
-	@echo "  make clean          delete all generated files"
+	@echo "  make clean          delete only generated files (obj_dir, TC*.log, TC*_cov.dat, cov_*, waves.vcd)"
 	@echo "Current settings: TOP=$(TOP) TESTS=\"$(TESTS)\""
 
 check:
@@ -73,5 +73,7 @@ covhtml: covtxt
 	verilator_coverage --write-info coverage.info coverage.dat
 	genhtml coverage.info --output-directory cov_html
 
+# Deletes only files this Makefile creates. Your own *.dat/*.hex/*.log files are kept.
 clean:
-	rm -rf obj_dir cov_annot cov_html *.log *.dat coverage.info cov_summary.txt waves.vcd
+	rm -rf obj_dir cov_annot cov_html
+	rm -f TC*.log TC*_cov.dat coverage.dat coverage.info cov_summary.txt waves.vcd

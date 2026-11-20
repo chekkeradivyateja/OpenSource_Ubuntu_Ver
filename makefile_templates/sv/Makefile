@@ -140,6 +140,7 @@ synth:
 	@grep -A30 "Printing statistics" synth.log | tail -n +2
 	@echo "Full log: synth.log"
 
+# Deletes only files and folders this Makefile creates; your sources are not touched.
 clean:
 	rm -rf obj_dir logs cov cov_annot cov_covergroup cov_html coverage.dat coverage_all.dat coverage.info \
 	  cov_report.txt synth.log waves_*.vcd waves_*.fst

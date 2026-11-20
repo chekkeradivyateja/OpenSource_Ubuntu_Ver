@@ -16,7 +16,10 @@ if [ "$1" = "--uvm" ]; then shift; FILES="differences/*.sv supported/*.sv uvm/*.
 FILES=${*:-${FILES:-differences/*.sv supported/*.sv}}
 pass=0; fail=0
 for f in $FILES; do
-  n=$(basename "$f" .sv); b=$HERE/build/$n; rm -rf "$b"; mkdir -p "$b"; cp "$f" "$b/"
+  if [ ! -f "$f" ]; then echo "FAIL  $f (file not found)"; fail=$((fail+1)); continue; fi
+  n=$(basename "$f" .sv)
+  case $n in ''|*[!A-Za-z0-9_]*) echo "SKIP  $f (test names may use only letters, digits and _)"; continue;; esac
+  b=$HERE/build/$n; rm -rf -- "$b"; mkdir -p "$b"; cp "$f" "$b/"
   src=$HERE/$f
   hdr() { sed -n "s|^// $1: \{0,1\}||p" "$src"; }
   extra=$(hdr EXTRA); bopts=$(hdr BUILD); ropts=$(hdr RUN)

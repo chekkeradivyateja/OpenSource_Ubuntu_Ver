@@ -31,6 +31,11 @@ updates may raise them slightly. Licenses: see `licenses/`.
 - Disk: 3 GB free. Internet for the apt packages. A user with sudo rights.
 
 ## Install (step by step)
+Copy and paste each command; do not retype it. None of the steps delete anything.
+If you cloned the repository before, update it with `cd ~/OpenSource_Ubuntu_Ver && git pull`
+(or rename the old folder: `mv ~/OpenSource_Ubuntu_Ver ~/OpenSource_Ubuntu_Ver.old`).
+Never use `rm -rf` with `~`: one extra space (`rm -rf ~/ folder`) deletes your whole home folder.
+
 1. Open a terminal (Ctrl+Alt+T).
 2. Install git, if it is not installed yet:
 

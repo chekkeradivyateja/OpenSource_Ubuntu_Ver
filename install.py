@@ -244,7 +244,8 @@ def install():
             log(f"==  {folder.name}: already installed")
             continue
         log(f"== unpacking {name}")
-        shutil.rmtree(folder, ignore_errors=True)
+        if not safe_rmtree(folder, DEST):  # an old or partial copy of this tool only
+            sys.exit(f"FAIL  {folder} is not a normal folder inside {DEST}; nothing was deleted. Check it, then run again.")
         if name.endswith(".zip"):
             with zipfile.ZipFile(PKG / name) as z:
                 z.extractall(folder)
@@ -257,14 +258,46 @@ def install():
     block = "\n".join([BEGIN, f"export VERILATOR_ROOT={ENV['VERILATOR_ROOT']}",
                        f"export UVM_HOME={ENV['UVM_HOME']}",
                        f"export PATH={VERILATOR}/bin:{SURFER}:$PATH", END])
-    BASHRC.write_text(strip_block(BASHRC.read_text() if BASHRC.exists() else "") + "\n" + block + "\n")
+    write_bashrc(strip_block(BASHRC.read_text() if BASHRC.exists() else "") + "\n" + block + "\n")
     log(f"== environment written to {BASHRC} (open a new terminal to use it)")
 
 
 def strip_block(text):
-    if BEGIN in text and END in text:
-        text = text[:text.index(BEGIN)].rstrip("\n") + text[text.index(END) + len(END):]
+    """Remove our marked blocks: from each END back to the nearest BEGIN before it. Other lines are kept."""
+    pos = 0
+    while (e := text.find(END, pos)) >= 0:
+        b = text.rfind(BEGIN, pos, e)
+        if b < 0:  # an END without its BEGIN: leave it, look further
+            pos = e + len(END)
+            continue
+        head = text[:b].rstrip("\n")
+        text, pos = head + text[e + len(END):], len(head)
     return text.rstrip("\n") + "\n"
+
+
+def write_bashrc(text):
+    """Keep a copy of the previous ~/.bashrc, then write the new one."""
+    if BASHRC.exists():
+        backup = BASHRC.with_name(".bashrc.open_ver_flow.bak")
+        shutil.copy2(BASHRC, backup)
+        log(f"   backup of the previous ~/.bashrc: {backup}")
+    BASHRC.write_text(text)
+
+
+def safe_rmtree(path, inside):
+    """Delete a folder only if it is strictly inside 'inside' and not a symlink; otherwise refuse."""
+    path, inside = Path(path), Path(inside).resolve()
+    if path.is_symlink():
+        log(f"REFUSED to delete {path}: it is a link")
+        return False
+    if not path.exists():
+        return True
+    real = path.resolve()
+    if inside not in real.parents:
+        log(f"REFUSED to delete {real}: it is not inside {inside}")
+        return False
+    shutil.rmtree(real)
+    return True
 
 
 # ---------------------------------------------------------------- self-test
@@ -308,20 +341,22 @@ def selftest(uvm):
         log(f"{'PASS' if code == 0 else 'FAIL'}  {cmd[0]}: {line.strip()}")
         ok &= code == 0
     if ok:
-        shutil.rmtree(tmp)
+        safe_rmtree(tmp, tempfile.gettempdir())
     else:
         log(f"Self-test files kept in {tmp}")
     return ok
 
 
 def uninstall():
+    """Remove only the 3 tool folders this installer created and its ~/.bashrc block."""
     for folder in ARCHIVES.values():
-        shutil.rmtree(folder, ignore_errors=True)
+        if folder.exists():
+            log(f"   removing {folder}" if safe_rmtree(folder, DEST) else f"   kept {folder}")
     if DEST.exists() and not any(DEST.iterdir()):
-        DEST.rmdir()
-    if BASHRC.exists():
-        BASHRC.write_text(strip_block(BASHRC.read_text()))
-    log(f"Removed {DEST} contents and the ~/.bashrc block. apt packages were kept.")
+        DEST.rmdir()  # only if empty
+    if BASHRC.exists() and BEGIN in BASHRC.read_text():
+        write_bashrc(strip_block(BASHRC.read_text()))
+    log("Removed the tool folders above and the ~/.bashrc block. Nothing else was touched; apt packages were kept.")
 
 
 def main():
