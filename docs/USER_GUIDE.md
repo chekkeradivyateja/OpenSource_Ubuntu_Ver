@@ -320,6 +320,7 @@ Look for `Number of cells` at the end. Errors here usually mean code that only w
 |---|---|
 | `makefile_templates/sv/Makefile` | SystemVerilog testbench (+ SVA, covergroups) |
 | `makefile_templates/uvm/Makefile` | UVM testbench |
+| `makefile_templates/Makefile` | smallest flow, tests selected by `+TESTn` (used by `examples/counter`) |
 
 1. Create the folders `rtl/`, `sva/` (optional), `tb/`, `sim/` in your project.
 2. Copy the template into `sim/`.

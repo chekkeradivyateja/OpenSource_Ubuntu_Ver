@@ -1,36 +1,36 @@
 # Status Report
 
-This report records what has been checked in the open-source flow and what has not.
-Only results that were actually run are listed as tested.
+What has been tested in this flow, and what has not. Only results that were actually run
+are listed as tested. All tests: Verilator 5.054, Ubuntu 24.04.5 LTS x86-64, one machine
+(4 cores, 7.5 GB RAM), unless stated otherwise.
 
-## Tested (Verilator 5.054, one machine, Ubuntu 24.04 LTS x86-64)
-- Lint (`--lint-only -Wall`)
-- Simulation (`--binary`)
-- Immediate and simple concurrent assertions (`--assert`)
-- Coverage collection (`--coverage`, `verilator_coverage`)
-- VCD waveforms (`--trace`)
-- Makefile template (`makefile_templates/Makefile`): tested on 2026-11-19 with
-  `examples/counter` (check, lint, TC1, regress, covtxt, covhtml, clean)
-- FST waveforms (`--trace-fst`): tested on 2026-11-19; the file decodes with
-  `fst2vcd`. (An earlier build with another version failed on a missing
-  `include/gtkwave/fastlz.c`; this does not happen with 5.054.)
-- UVM: tested on 2026-11-19 with a minimal test (one uvm_test, one objection,
-  one message). Library: github.com/verilator/uvm commit 656f20d
-  (UVM 2020.3.1) with two patches in `src/base/uvm_component.svh`:
-  `bit clone;` -> `bit clone_flag;` and
-  `wrapper.clone = clone;` -> `wrapper.clone_flag = clone;`.
-  Compile with `--binary --vpi -j 1`: 4 min 30 s, peak RAM 2.9 GB,
-  662 MB build folder. Run: under 1 s, UVM_ERROR 0, UVM_FATAL 0.
-- 2026-11-20: Makefile templates `sv/` and `uvm/` with `examples/sv_project` and
-  `examples/uvm_project`: all targets, including failure detection with injected bugs.
-- 2026-11-20: every command in `USER_GUIDE.md`.
-- 2026-11-20: `SV_UVM_SUPPORT.md`: 83 SystemVerilog tests and 1 UVM test in `support_tests/`
-  (UVM: field macros, sequences, factory override, TLM FIFO, events, register model, report catcher).
+## Tested
 
-## Not working or not tested yet
-- Constructs listed in `SV_UVM_SUPPORT.md` sections 2-3 (with tested rewrites) and section 6 (not tested).
-- UVM without the two patches: not tested.
-- Installer: tested on one Ubuntu 24.04.5 machine; install on a fresh machine not tested yet.
+| Date | Item | Result |
+|---|---|---|
+| 2026-11-19 | Verilator 5.054: lint, simulation, assertions, code coverage, VCD | pass |
+| 2026-11-19 | FST waveforms (`--trace-fst`, decoded with `fst2vcd`) | pass |
+| 2026-11-19 | UVM library (verilator/uvm 656f20d, 2 patches): minimal test | pass; first compile 4 min 30 s, peak RAM 2.9 GB |
+| 2026-11-19 | `install.py` on this machine, after removing the tools: check, apt install, unpack, `~/.bashrc`, self-test 8/8 incl. UVM | pass; 6 min 18 s, +3.0 GB RAM peak, about 300 MB disk |
+| 2026-11-19 | `install.py` `--check`, second run, `--uninstall`, checksum error, Ubuntu 22.04 message (simulated) | pass |
+| 2026-11-19 | trainee machine with Ubuntu 22.04.2: installer stops with the Ubuntu FAIL line, nothing changed | as designed |
+| 2026-11-20 | Makefile templates `sv/`, `uvm/` and the simple `Makefile` with their examples: every target, and failure detection with a bug injected in the design | pass |
+| 2026-11-20 | every command in `USER_GUIDE.md` | pass |
+| 2026-11-20 | `SV_UVM_SUPPORT.md`: 83 SystemVerilog tests + 1 UVM test in `support_tests/` | 84/84 pass (also confirmed on a fresh clone from GitHub) |
+
+UVM library patches (in `src/base/uvm_component.svh`):
+`bit clone;` -> `bit clone_flag;` and `wrapper.clone = clone;` -> `wrapper.clone_flag = clone;`.
+
+## Not tested yet
+- `install.py` on a **fresh** Ubuntu 24.04 machine (planned).
+- The Ubuntu 22.04 -> 24.04 upgrade offered by the installer (the commands were only simulated).
+- Opening Surfer, GTKWave or the browser from `make waves` / `make covopen` on another machine.
+- UVM without the two patches.
+- The items in `SV_UVM_SUPPORT.md` section 6.
+
+## Known limits
+See `SV_UVM_SUPPORT.md` (2-state simulation, SVA limits, coverage limits) and
+`USER_GUIDE.md` section 11.
 
 ## How to report a problem
-Open an Issue on the repository and attach the installer log file.
+Open an Issue on the repository and attach `install.log` or the log of the failing command.

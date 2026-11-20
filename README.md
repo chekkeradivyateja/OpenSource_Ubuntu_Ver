@@ -66,10 +66,10 @@ The installer writes `install.log` in the repository folder.
 ## Status
 | Item | Status |
 |---|---|
-| Verilator 5.054: lint, simulation, assertions, coverage, VCD | tested on one machine |
+| Verilator 5.054: lint, simulation, assertions, coverage, VCD | tested on 2026-11-19 with Verilator 5.054, one machine |
 | Verilator 5.054: FST waveforms, UVM | FST tested on 2026-11-19; UVM: examples/uvm_project and a UVM feature test on 2026-11-20; one machine |
 | Installer (install.py) | install on one Ubuntu 24.04.5 machine: self-test 8/8 PASS incl. UVM (2026-11-19); fresh-machine install not tested yet |
-| Makefile template (simple, examples/counter) | tested on 2026-11-19 with Verilator 5.054, one machine |
+| Makefile template (simple, examples/counter) | tested on 2026-11-20 with Verilator 5.054, one machine |
 | Makefile templates sv/ and uvm/ with examples/sv_project and uvm_project | all targets incl. failure detection tested on 2026-11-20 with Verilator 5.054, one machine |
 | docs/USER_GUIDE.md commands | all run on 2026-11-20 with Verilator 5.054, one machine |
 | docs/SV_UVM_SUPPORT.md (docs/support_tests) | 83 SystemVerilog tests + 1 UVM test pass on 2026-11-20, one machine |
@@ -90,4 +90,5 @@ cover-property coverage; the HTML report shows line coverage only).
 See docs/SV_UVM_SUPPORT.md and docs/USER_GUIDE.md section 11.
 
 ## Problems
-Open an Issue and attach the installer log file (`install.log`).
+Open an Issue (the form asks for the details needed) and attach `install.log`.
+Installer messages and fixes: [installer/README.md](installer/README.md).

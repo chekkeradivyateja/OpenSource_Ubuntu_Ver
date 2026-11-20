@@ -1,11 +1,25 @@
-# Generic Verilator Makefile. Layout: ../rtl/*.sv  ../tb/*.sv  (this file in sim/)
-# Usage: make check | lint | TC1 | regress | covtxt | covhtml | clean
-#        add WAVES=1 to dump waves.vcd (testbench needs an `ifdef DUMP_WAVES block)
+# =============================================================================
+#  Simple Verilator Makefile: one RTL folder, one testbench folder, tests TC1, TC2, ...
+#  Tested with Verilator 5.054 on Ubuntu 24.04 using examples/counter.
+#  Start here:   make help
+#  For bigger projects use makefile_templates/sv/Makefile or uvm/Makefile.
+# =============================================================================
+#  Layout:  <project>/rtl/*.sv   <project>/tb/*.sv   <project>/sim/Makefile (this file)
+#  Test TCn runs the simulator with the plusarg +TESTn; the testbench selects the test
+#  with $test$plusargs("TEST1"), $test$plusargs("TEST2"), ...
+#  WAVES=1 compiles with -DDUMP_WAVES; the testbench needs an `ifdef DUMP_WAVES block
+#  that calls $dumpfile("waves.vcd") and $dumpvars (see examples/counter/tb/tb_top.sv).
+# =============================================================================
 
+# ============================== EDIT HERE ====================================
+# 1. Top testbench module
 TOP    ?= tb_top
+# 2. Design and testbench files (packages must come before the files that import them)
 RTL    ?= $(wildcard ../rtl/*.sv ../rtl/*.v)
 TB     ?= $(wildcard ../tb/*.sv)
+# 3. Tests run by 'make regress' (TCn -> plusarg +TESTn)
 TESTS  ?= TC1 TC2
+# =============================================================================
 WAVES  ?= 0
 
 VFLAGS := --binary --assert --coverage --trace -Wno-fatal --top-module $(TOP)
@@ -13,7 +27,20 @@ ifeq ($(WAVES),1)
 VFLAGS += -DDUMP_WAVES
 endif
 
-.PHONY: check lint build regress covtxt covhtml clean
+.PHONY: help check lint build regress covtxt covhtml clean
+
+help:
+	@echo "Targets:"
+	@echo "  make check          show tool versions and the source files found"
+	@echo "  make lint           verilator --lint-only -Wall on all files"
+	@echo "  make build          compile into obj_dir/"
+	@echo "  make TC1            run test 1 (plusarg +TEST1) -> TC1.log, TC1_cov.dat"
+	@echo "  make TC1 WAVES=1    same, and write waves.vcd"
+	@echo "  make regress        run all tests in TESTS, print REGRESSION PASSED/FAILED"
+	@echo "  make covtxt         merged coverage summary -> cov_summary.txt, cov_annot/"
+	@echo "  make covhtml        HTML line-coverage report -> cov_html/index.html"
+	@echo "  make clean          delete all generated files"
+	@echo "Current settings: TOP=$(TOP) TESTS=\"$(TESTS)\""
 
 check:
 	@verilator --version
@@ -34,8 +61,9 @@ TC%: build
 	mv coverage.dat TC$*_cov.dat
 
 regress:
-	@for t in $(TESTS); do $(MAKE) --no-print-directory $$t || exit 1; done
-	@grep -l -E '%Error|Assertion failed' $(addsuffix .log,$(TESTS)) && echo "REGRESSION FAILED" || echo "REGRESSION PASSED"
+	@for t in $(TESTS); do $(MAKE) --no-print-directory $$t || { echo "REGRESSION FAILED ($$t)"; exit 1; }; done
+	@if grep -l -E '%Error|Assertion failed' $(addsuffix .log,$(TESTS)); \
+	  then echo "REGRESSION FAILED"; exit 1; else echo "REGRESSION PASSED"; fi
 
 covtxt:
 	verilator_coverage --write coverage.dat *_cov.dat
